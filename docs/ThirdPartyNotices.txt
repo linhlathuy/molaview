@@ -1,0 +1,11 @@
+MoLaView bundles no third-party runtime components.
+
+Rendering uses a small purpose-built WebGL layer (webview/gl.ts and
+webview/renderer.ts); toolbar icons are original inline SVG paths drawn to
+match the Visual Studio Code icon metrics. No third-party fonts, icon fonts,
+or 3D engines are included in the packaged extension.
+
+The periodic-table symbols, approximate display radii, and conventional atom
+colors in src/elements.ts are an original compact data table assembled for this
+extension from widely published chemical constants and CPK/Jmol conventions.
+No VESTA data files or assets are included.

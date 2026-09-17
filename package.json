@@ -1,0 +1,128 @@
+{
+  "name": "molaview",
+  "displayName": "MoLaView",
+  "publisher": "local-research-tools",
+  "description": "View molecular and crystal structures - CIF, VASP, XYZ, PDB, MOL/SDF, and ASE trajectories - in an interactive 3D editor tab. No Python, server, or network required.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/linhlathuy/molaview.git"
+  },
+  "bugs": {
+    "url": "https://github.com/linhlathuy/molaview/issues"
+  },
+  "homepage": "https://github.com/linhlathuy/molaview#readme",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "molecularViewer.reopenAsText",
+        "title": "Molecular Viewer: Reopen as Text"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "molecularViewer.structureEditor",
+        "displayName": "MoLaView",
+        "selector": [
+          {
+            "filenamePattern": "*.cif"
+          },
+          {
+            "filenamePattern": "*.CIF"
+          },
+          {
+            "filenamePattern": "*.xyz"
+          },
+          {
+            "filenamePattern": "*.XYZ"
+          },
+          {
+            "filenamePattern": "*.extxyz"
+          },
+          {
+            "filenamePattern": "*.EXTXYZ"
+          },
+          {
+            "filenamePattern": "*.pdb"
+          },
+          {
+            "filenamePattern": "*.PDB"
+          },
+          {
+            "filenamePattern": "*.ent"
+          },
+          {
+            "filenamePattern": "*.ENT"
+          },
+          {
+            "filenamePattern": "*.mol"
+          },
+          {
+            "filenamePattern": "*.MOL"
+          },
+          {
+            "filenamePattern": "*.sdf"
+          },
+          {
+            "filenamePattern": "*.SDF"
+          },
+          {
+            "filenamePattern": "*.traj"
+          },
+          {
+            "filenamePattern": "*.TRAJ"
+          },
+          {
+            "filenamePattern": "*.vasp"
+          },
+          {
+            "filenamePattern": "*.VASP"
+          },
+          {
+            "filenamePattern": "**/POSCAR*"
+          },
+          {
+            "filenamePattern": "**/CONTCAR*"
+          },
+          {
+            "filenamePattern": "**/XDATCAR*"
+          }
+        ],
+        "priority": "default"
+      }
+    ]
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "Structure files are parsed as data and never executed."
+    },
+    "virtualWorkspaces": true
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "scripts": {
+    "build": "node config/esbuild.mjs",
+    "watch": "node config/esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test --config config/playwright.config.ts",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "verify": "npm run typecheck && npm run build && npm run test:e2e"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.18.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.25.9",
+    "typescript": "^5.9.2"
+  }
+}

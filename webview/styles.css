@@ -1,0 +1,376 @@
+:root {
+  color-scheme: light dark;
+  font-family: var(--vscode-font-family, system-ui, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: var(--vscode-foreground, #d4d4d4);
+  background: var(--vscode-editor-background, #1e1e1e);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 1px;
+}
+
+#app,
+.viewer-workspace,
+.canvas-wrap {
+  min-width: 0;
+  min-height: 0;
+}
+
+#app {
+  display: grid;
+  grid-template-rows: 36px minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--vscode-panel-border, #3f3f46);
+  background: var(--vscode-editorGroupHeader-tabsBackground, #252526);
+}
+
+.toolbar-title {
+  flex: 0 1 auto;
+  min-width: 80px;
+  overflow: hidden;
+  color: var(--vscode-foreground, #e5e5e5);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  margin-left: auto;
+  padding-right: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Keep the final button off the padding edge when the strip scrolls. */
+  scroll-padding-right: 4px;
+}
+
+.toolbar-controls::-webkit-scrollbar { display: none; }
+
+/*
+ * Scrollbars are hidden, so when the strip genuinely cannot fit (very narrow
+ * editors) fade the trailing edge to signal the row scrolls.
+ */
+.toolbar-controls {
+  mask-image: linear-gradient(to left, transparent 0, #000 12px);
+  -webkit-mask-image: linear-gradient(to left, transparent 0, #000 12px);
+}
+
+.toolbar-controls:not(.scrollable) {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+.icon-button {
+  display: inline-flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--vscode-icon-foreground, #c5c5c5);
+  background: transparent;
+  cursor: pointer;
+}
+
+.icon-button .icon { display: block; width: 16px; height: 16px; flex: 0 0 16px; }
+.icon-button:hover { background: var(--vscode-toolbar-hoverBackground, #3a3d41); }
+.icon-button.active { color: var(--vscode-button-foreground, white); background: var(--vscode-button-background, #0e639c); }
+.button-text { margin-left: 2px; font-weight: 700; }
+
+.viewer-workspace {
+  --inspector-width: clamp(240px, 25vw, 320px);
+  display: grid;
+  /*
+   * The inspector track must never exceed what is left after the canvas keeps
+   * its share: a fixed track plus a floored canvas track can total more than
+   * the editor width, and because the body cannot scroll the overflow is
+   * clipped, silently cutting the panel off at the right edge. Capping the
+   * track against the viewport makes the panel shrink instead of disappear.
+   */
+  grid-template-columns: minmax(0, 1fr) 5px min(var(--inspector-width), calc(100% - 5px - 120px));
+  height: 100%;
+}
+
+.resize-handle {
+  position: relative;
+  background: var(--vscode-panel-border, #3f3f46);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+/* Widen the grab target beyond the 5px visual seam. */
+.resize-handle::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  right: -3px;
+  content: '';
+}
+
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: var(--vscode-focusBorder, #007fd4);
+}
+
+.resize-handle:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: -1px;
+}
+
+/* Keep the pointer from switching to grab/text over the canvas mid-drag. */
+.viewer-workspace.resizing { cursor: col-resize; }
+.viewer-workspace.resizing .canvas-wrap,
+.viewer-workspace.resizing .inspector { pointer-events: none; }
+
+.canvas-wrap {
+  position: relative;
+  overflow: hidden;
+  background: #17191d;
+}
+
+.structure-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+.structure-canvas:active { cursor: grabbing; }
+
+.inspector {
+  min-width: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--vscode-panel-border, #3f3f46);
+  background: var(--vscode-sideBar-background, #252526);
+}
+
+.inspector-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: 35px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--vscode-panel-border, #3f3f46);
+}
+
+.tab,
+.segmented button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--vscode-descriptionForeground, #aaa);
+  background: transparent;
+  cursor: pointer;
+}
+
+.tab:hover,
+.segmented button:hover { color: var(--vscode-foreground, #ddd); background: var(--vscode-list-hoverBackground, #2a2d2e); }
+.tab.active { color: var(--vscode-foreground, #fff); border-bottom-color: var(--vscode-focusBorder, #007fd4); }
+
+.inspector-body {
+  box-sizing: border-box;
+  height: calc(100% - 35px);
+  /* Extra right padding so right-aligned values clear the overlay scrollbar. */
+  padding: 12px 18px 12px 12px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.inspector-body h2 {
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.inspector-body h3 {
+  margin: 18px 0 8px;
+  color: var(--vscode-descriptionForeground, #b8b8b8);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.property-row {
+  display: grid;
+  grid-template-columns: minmax(72px, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--vscode-widget-border, #3b3b3b);
+}
+
+.property-label { color: var(--vscode-descriptionForeground, #aaa); }
+.property-value { overflow-wrap: anywhere; text-align: right; }
+
+.steppers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.stepper { display: grid; grid-template-columns: 14px minmax(0, 1fr); align-items: center; gap: 3px; }
+.stepper input { box-sizing: border-box; width: 100%; min-width: 0; }
+
+input[type='number'],
+select {
+  height: 26px;
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 2px;
+  color: var(--vscode-input-foreground, #ddd);
+  background: var(--vscode-input-background, #3c3c3c);
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  min-height: 30px;
+  border: 1px solid var(--vscode-widget-border, #454545);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.segmented button { padding: 4px; border-right: 1px solid var(--vscode-widget-border, #454545); font-size: 11px; }
+.segmented button:last-child { border-right: 0; }
+.segmented button.active { color: var(--vscode-button-foreground, #fff); background: var(--vscode-button-background, #0e639c); }
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 27px;
+  cursor: pointer;
+}
+
+.check-row input { accent-color: var(--vscode-focusBorder, #007fd4); }
+
+.slider-row { display: block; margin: 8px 0 12px; }
+.slider-label { display: flex; justify-content: space-between; margin-bottom: 3px; color: var(--vscode-descriptionForeground, #aaa); }
+.slider-row input { width: 100%; margin: 0; accent-color: var(--vscode-focusBorder, #007fd4); }
+
+.bond-pair-row {
+  display: grid;
+  /* The name column yields first; the cutoff field shrinks rather than pushing
+     itself and the unit past the panel edge on a narrow inspector. */
+  grid-template-columns: 18px minmax(0, 1fr) minmax(0, 68px) 14px;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+}
+
+.bond-pair-row input[type='checkbox'] { accent-color: var(--vscode-focusBorder, #007fd4); }
+.bond-pair-row input[type='number'] { box-sizing: border-box; width: 100%; min-width: 0; padding: 2px 4px; }
+.bond-pair-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bond-pair-unit { color: var(--vscode-descriptionForeground, #aaa); }
+
+.selection-item {
+  display: grid;
+  gap: 3px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--vscode-widget-border, #3b3b3b);
+}
+
+.selection-item span { color: var(--vscode-descriptionForeground, #aaa); font-family: var(--vscode-editor-font-family, monospace); font-size: 11px; }
+.empty-state { color: var(--vscode-descriptionForeground, #aaa); }
+
+.trajectory-bar {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  display: none;
+  grid-template-columns: 28px 28px 28px minmax(80px, 1fr) auto auto auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 38px;
+  padding: 4px 6px;
+  border: 1px solid var(--vscode-widget-border, #454545);
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background, #252526);
+  box-shadow: 0 2px 8px #0006;
+}
+
+.trajectory-bar.visible { display: grid; }
+.trajectory-scrubber { min-width: 80px; accent-color: var(--vscode-focusBorder, #007fd4); }
+.frame-label { padding: 0 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.speed-select { width: 68px; }
+.loop-toggle { display: flex; align-items: center; gap: 3px; padding-right: 4px; white-space: nowrap; }
+
+.error-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  background: color-mix(in srgb, var(--vscode-editor-background, #1e1e1e) 94%, transparent);
+}
+
+.error-overlay.visible { display: grid; }
+.error-overlay .icon { color: var(--vscode-errorForeground, #f48771); font-size: 24px; }
+.error-overlay pre { max-width: 680px; overflow: auto; color: var(--vscode-descriptionForeground, #aaa); white-space: pre-wrap; }
+
+.command-button {
+  min-height: 28px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 2px;
+  color: var(--vscode-button-foreground, #fff);
+  background: var(--vscode-button-background, #0e639c);
+  cursor: pointer;
+}
+
+.command-button:hover { background: var(--vscode-button-hoverBackground, #1177bb); }
+
+@media (max-width: 720px) {
+  .toolbar-title { display: none; }
+  /* Tighten spacing before the control strip has to scroll and clip. */
+  .toolbar { gap: 4px; padding: 0 8px; }
+  .icon-button { flex: 0 0 26px; width: 26px; }
+  /* Narrow editors give the inspector a smaller preferred width rather than a
+     hard canvas floor, which would push the panel past the right edge. */
+  .viewer-workspace { --inspector-width: clamp(200px, 42vw, 300px); }
+  .trajectory-bar { grid-template-columns: 28px 28px 28px minmax(70px, 1fr); }
+  .frame-label { grid-column: 1 / -1; grid-row: 2; padding: 2px 4px; }
+  .speed-select, .loop-toggle { display: none; }
+}
