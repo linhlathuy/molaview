@@ -181,6 +181,7 @@ export class MolecularScene {
   private animation = 0;
   private dirty = true;
 
+
   // Camera state; orbit is expressed as a target plus a spherical offset.
   private orthographic = false;
   private readonly target = new V3();
@@ -290,17 +291,35 @@ export class MolecularScene {
   private orbit(dx: number, dy: number): void {
     const offset = this.position.clone().sub(this.target);
     const radius = offset.length();
-    // Spherical angles about the current up axis.
-    let theta = Math.atan2(offset.x, offset.z);
-    let phi = Math.acos(Math.min(1, Math.max(-1, offset.y / radius)));
+    if (!radius) return;
+    /*
+     * Spherical angles about the current up axis. This used to measure the polar
+     * angle against world Y no matter where up pointed, so aligning along the b
+     * axis - which flips up to Z because the view direction is parallel to Y -
+     * left the camera sitting exactly on the orbit's pole. phi clamped to 0.001
+     * and dragging moved the camera about 0.02 units out of 20, which reads as
+     * rotation being dead. Building the frame from up keeps the poles where the
+     * user sees them, whichever axis is up.
+     */
+    const pole = this.up.clone().normalize();
+    // Any two axes perpendicular to the pole complete the frame; seed the first
+    // from whichever world axis is least parallel to it so the cross is stable.
+    const seed = Math.abs(pole.x) < 0.9 ? new V3(1, 0, 0) : new V3(0, 1, 0);
+    // Ordered so that a Y pole yields exactly the world X and Z axes, keeping
+    // the ordinary case bit-for-bit identical to the plain spherical form.
+    const basisZ = seed.clone().cross(pole).normalize();
+    const basisX = pole.clone().cross(basisZ).normalize();
+    const height = offset.dot(pole);
+    let theta = Math.atan2(offset.dot(basisX), offset.dot(basisZ));
+    let phi = Math.acos(Math.min(1, Math.max(-1, height / radius)));
     theta -= (dx / this.canvas.clientWidth) * Math.PI * 2;
     phi -= (dy / this.canvas.clientHeight) * Math.PI;
     phi = Math.min(Math.PI - 0.001, Math.max(0.001, phi));
-    this.position.set(
-      this.target.x + radius * Math.sin(phi) * Math.sin(theta),
-      this.target.y + radius * Math.cos(phi),
-      this.target.z + radius * Math.sin(phi) * Math.cos(theta)
-    );
+    const sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
+    this.position.copy(this.target)
+      .addScaled(basisX, radius * sinPhi * Math.sin(theta))
+      .addScaled(pole, radius * cosPhi)
+      .addScaled(basisZ, radius * sinPhi * Math.cos(theta));
   }
 
   private pan(dx: number, dy: number): void {
@@ -512,7 +531,7 @@ export class MolecularScene {
   private buildLabels(): void {
     if (!this.structure || !this.options.showLabels || this.structure.atoms.length > 500) return;
     const gl = this.gl;
-    for (const atom of this.atoms) {
+    for (const [index, atom] of this.atoms.entries()) {
       const canvas = document.createElement('canvas');
       canvas.width = 128;
       canvas.height = 48;
@@ -533,8 +552,7 @@ export class MolecularScene {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      const index = this.atoms.indexOf(atom);
-      const offset = (index >= 0 ? this.atomRadii[index]! : 0) + 0.32;
+      const offset = (this.atomRadii[index] ?? 0) + 0.32;
       this.labels.push({
         texture,
         center: new V3(atom.position[0], atom.position[1] + offset, atom.position[2]),
@@ -780,6 +798,25 @@ export class MolecularScene {
     const data = this.canvas.toDataURL('image/png').split(',')[1] ?? '';
     const binary = atob(data);
     return Uint8Array.from(binary, character => character.charCodeAt(0));
+  }
+
+  /**
+   * Raw RGBA of the current view, for frame-by-frame capture. readPixels gives
+   * bottom-up rows, so they are flipped here to the top-down order images use.
+   */
+  capturePixels(): { data: Uint8Array; width: number; height: number } {
+    this.render();
+    const gl = this.gl;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    const flipped = new Uint8Array(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, flipped);
+    const data = new Uint8Array(width * height * 4);
+    const stride = width * 4;
+    for (let row = 0; row < height; row += 1) {
+      data.set(flipped.subarray((height - 1 - row) * stride, (height - row) * stride), row * stride);
+    }
+    return { data, width, height };
   }
 
   stats(): PreparedRenderStructure['stats'] {

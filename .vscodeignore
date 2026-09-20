@@ -3,14 +3,15 @@
 src/**
 webview/**
 playwright/**
+test_structures/**
 node_modules/**
 test-results/**
 playwright-report/**
 config/**
 docs/**
-# The changelog and license notices moved under docs/, but both belong in the
-# package - re-include them after the blanket docs/ exclusion above.
-!docs/CHANGELOG.md
+# Third-party notices live under docs/ but belong in the package - re-include
+# after the blanket docs/ exclusion above. CHANGELOG.md sits at the project
+# root because vsce only reads a root changelog for the Marketplace listing.
 !docs/ThirdPartyNotices.txt
 tsconfig.json
 package-lock.json

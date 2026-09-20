@@ -10,6 +10,7 @@ export interface ToolbarActions {
   measurement(mode: MeasurementMode): void;
   background(): void;
   screenshot(): void;
+  exportGif(): void;
   reset(): void;
 }
 
@@ -55,6 +56,9 @@ export function createToolbar(actions: ToolbarActions): Toolbar {
   }
   controls.append(iconButton('color-mode', 'Switch canvas background', actions.background));
   controls.append(iconButton('device-camera', 'Save PNG screenshot', actions.screenshot));
+  const gif = iconButton('file-media', 'Save animated GIF of the trajectory', actions.exportGif);
+  gif.classList.add('gif-export');
+  controls.append(gif);
   controls.append(iconButton('discard', 'Reset viewer settings', actions.reset));
   toolbar.append(title, controls);
   // The fade cue only applies while the strip actually overflows.

@@ -1,11 +1,30 @@
 {
   "name": "molaview",
   "displayName": "MoLaView",
-  "publisher": "local-research-tools",
+  "publisher": "ltlinh",
   "description": "View molecular and crystal structures - CIF, VASP, XYZ, PDB, MOL/SDF, and ASE trajectories - in an interactive 3D editor tab. No Python, server, or network required.",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "license": "MIT",
   "icon": "media/icon.png",
+  "categories": [
+    "Visualization",
+    "Data Science",
+    "Other"
+  ],
+  "keywords": [
+    "molecule",
+    "crystal",
+    "cif",
+    "vasp",
+    "poscar",
+    "xyz",
+    "pdb",
+    "ase",
+    "trajectory",
+    "3d",
+    "chemistry",
+    "materials"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/linhlathuy/molaview.git"
@@ -97,7 +116,18 @@
         ],
         "priority": "default"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "MoLaView",
+      "properties": {
+        "molaview.trajectory.maxFrames": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "markdownDescription": "Maximum number of trajectory frames to load. `0` loads every frame. A positive value loads at most that many frames, spread evenly across the trajectory, which keeps the scrubber manageable for very long runs. Reopen the structure for a change to take effect."
+        }
+      }
+    }
   },
   "capabilities": {
     "untrustedWorkspaces": {
@@ -110,6 +140,7 @@
     "workspace"
   ],
   "scripts": {
+    "vscode:prepublish": "npm run build",
     "build": "node config/esbuild.mjs",
     "watch": "node config/esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",

@@ -52,11 +52,15 @@ class FileSource implements RandomAccessSource {
   }
 }
 
-function sampleFrameIndices(frameCount: number): number[] {
+function sampleFrameIndices(frameCount: number, maxFrames = 0): number[] {
   if (!Number.isInteger(frameCount) || frameCount < 0) throw new Error('Trajectory frame count must be a non-negative integer');
   if (frameCount === 0) return [];
+  const limit = Number.isInteger(maxFrames) && maxFrames > 0 ? maxFrames : 0;
+  if (limit === 0 || frameCount <= limit) return Array.from({ length: frameCount }, (_, index) => index);
   const last = frameCount - 1;
-  return [...new Set(Array.from({ length: 11 }, (_, index) => Math.round(last * index / 10)))];
+  // A limit of one would divide by zero below; show the first frame alone.
+  if (limit === 1) return [0];
+  return [...new Set(Array.from({ length: limit }, (_, index) => Math.round(last * index / (limit - 1))))];
 }
 
 function isArrayDescriptor(value: unknown): value is ArrayDescriptor {
@@ -87,18 +91,18 @@ export class AseTrajectorySource {
   private readonly offsets = new Map<number, number>();
   private header: UlmRecord = {};
 
-  private constructor(private readonly source: RandomAccessSource, private readonly name: string) {}
+  private constructor(private readonly source: RandomAccessSource, private readonly name: string, private readonly maxFrames: number) {}
 
-  static async open(bytes: Uint8Array, name: string): Promise<AseTrajectorySource> {
-    return AseTrajectorySource.fromSource(new MemorySource(bytes), name);
+  static async open(bytes: Uint8Array, name: string, maxFrames = 0): Promise<AseTrajectorySource> {
+    return AseTrajectorySource.fromSource(new MemorySource(bytes), name, maxFrames);
   }
 
-  static async openFile(path: string, name: string): Promise<AseTrajectorySource> {
-    return AseTrajectorySource.fromSource(await FileSource.open(path), name);
+  static async openFile(path: string, name: string, maxFrames = 0): Promise<AseTrajectorySource> {
+    return AseTrajectorySource.fromSource(await FileSource.open(path), name, maxFrames);
   }
 
-  private static async fromSource(source: RandomAccessSource, name: string): Promise<AseTrajectorySource> {
-    const trajectory = new AseTrajectorySource(source, name);
+  private static async fromSource(source: RandomAccessSource, name: string, maxFrames: number): Promise<AseTrajectorySource> {
+    const trajectory = new AseTrajectorySource(source, name, maxFrames);
     try {
       await trajectory.initialize();
       return trajectory;
@@ -122,11 +126,14 @@ export class AseTrajectorySource {
     const offsetsPosition = int64(header, 40);
     const tableLength = this.frameCount * 8;
     this.bounds(offsetsPosition, tableLength, 'ULM frame offset table');
-    this.sampledIndices = sampleFrameIndices(this.frameCount);
-    await Promise.all(this.sampledIndices.map(async index => {
-      const bytes = await this.read(offsetsPosition + index * 8, 8, `ULM offset for frame ${index + 1}`);
-      this.offsets.set(index, int64(bytes));
-    }));
+    this.sampledIndices = sampleFrameIndices(this.frameCount, this.maxFrames);
+    // One contiguous read of the offset table: the per-frame entries are adjacent,
+    // so a read per sampled frame would issue thousands of 8-byte reads when the
+    // whole trajectory is loaded.
+    const table = await this.read(offsetsPosition, tableLength, 'ULM frame offset table');
+    for (const index of this.sampledIndices) {
+      this.offsets.set(index, int64(table, index * 8));
+    }
     this.header = await this.record(0);
   }
 

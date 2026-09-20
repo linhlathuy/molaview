@@ -22,7 +22,7 @@ npm run build
 npx @vscode/vsce package
 ```
 
-This produces `molaview-1.0.0.vsix` in the project root.
+This produces `molaview-1.0.1.vsix` in the project root.
 
 To install a specific release instead of the default branch, check it out before
 building — for example `git checkout v1.0.0`.
@@ -37,13 +37,13 @@ building — for example `git checkout v1.0.0`.
 2. Open the Extensions view — `Ctrl+Shift+X` (macOS: `Cmd+Shift+X`).
 3. Click the `...` menu at the top of the Extensions panel.
 4. Choose **Install from VSIX...**
-5. Select the `molaview-1.0.0.vsix` you just built.
+5. Select the `molaview-1.0.1.vsix` you just built.
 6. Reload VS Code if prompted.
 
 ### B. From the command line
 
 ```bash
-code --install-extension molaview-1.0.0.vsix
+code --install-extension molaview-1.0.1.vsix
 ```
 
 If `code` is not on your PATH: open VS Code, press `Ctrl+Shift+P`

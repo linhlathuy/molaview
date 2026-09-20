@@ -17,6 +17,7 @@ export type ViewMessage =
   | { type: 'requestFrame'; sampleIndex: number }
   | { type: 'reopenAsText' }
   | { type: 'saveScreenshot'; bytes: number[]; suggestedName: string }
+  | { type: 'saveGif'; bytes: number[]; suggestedName: string }
   | { type: 'setBondOverrides'; tolerance: number; hiddenPairs: string[]; cutoffs: Record<string, number> }
   | { type: 'setSupercell'; repetitions: Vec3 };
 
@@ -45,6 +46,12 @@ export function isViewMessage(value: unknown): value is ViewMessage {
         && message.bytes.every(byte => Number.isInteger(byte) && byte >= 0 && byte <= 255)
         && typeof message.suggestedName === 'string'
         && /^[^/\\]+\.png$/i.test(message.suggestedName);
+    case 'saveGif':
+      return Array.isArray(message.bytes)
+        && message.bytes.length <= 100_000_000
+        && message.bytes.every(byte => Number.isInteger(byte) && byte >= 0 && byte <= 255)
+        && typeof message.suggestedName === 'string'
+        && /^[^/\\]+\.gif$/i.test(message.suggestedName);
     case 'setBondOverrides': {
       const cutoffs = record(message.cutoffs);
       return finiteNumber(message.tolerance)

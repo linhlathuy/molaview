@@ -9,6 +9,7 @@ const PATHS: Record<string, string> = {
   'triangle-right': 'M5 2.5 12 8l-7 5.5v-11z',
   'type-hierarchy-sub': 'M6 2h4v3H6V2zM2 11h4v3H2v-3zm8 0h4v3h-4v-3zM7.25 5.5h1.5V8H12v3h-1.5V9.5h-5V11H4V8h3.25V5.5z',
   'color-mode': 'M8 1.5A6.5 6.5 0 1 0 8 14.5 6.5 6.5 0 0 0 8 1.5zm0 1.5v10a5 5 0 0 1 0-10z',
+  'file-media': 'M2 2h12v12H2V2zm1.5 1.5v9h9v-9h-9zM5 5.5 9.5 8 5 10.5v-5z',
   'device-camera': 'M5.5 3 4.75 4.5H2.5A1.5 1.5 0 0 0 1 6v6a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 15 12V6a1.5 1.5 0 0 0-1.5-1.5h-2.25L10.5 3h-5zM8 11.5A2.75 2.75 0 1 1 8 6a2.75 2.75 0 0 1 0 5.5z',
   discard: 'M8 3a5 5 0 1 0 4.55 2.9l1.36-.63A6.5 6.5 0 1 1 8 1.5V0l3 2.5L8 5V3z',
   play: 'M4 2.5 13 8l-9 5.5v-11z',

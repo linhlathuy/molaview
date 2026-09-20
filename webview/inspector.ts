@@ -17,6 +17,25 @@ export interface InspectorActions {
   bonds(state: BondUiState): void;
 }
 
+/**
+ * True when two frames would produce the same inspector controls. The element
+ * set drives both the element toggles and the per-pair bond rows, and the space
+ * group and cell presence drive whole sections, so any change there needs a
+ * full rebuild rather than a value refresh.
+ */
+function sameShape(a: Structure, b: Structure): boolean {
+  if (a.atoms.length !== b.atoms.length) return false;
+  if (Boolean(a.cell) !== Boolean(b.cell)) return false;
+  if (a.metadata?.spaceGroup !== b.metadata?.spaceGroup) return false;
+  const left = new Set<string>();
+  for (const atom of a.atoms) left.add(atom.element);
+  const right = new Set<string>();
+  for (const atom of b.atoms) right.add(atom.element);
+  if (left.size !== right.size) return false;
+  for (const element of left) if (!right.has(element)) return false;
+  return true;
+}
+
 function formula(structure: Structure): string {
   const counts = new Map<string, number>();
   structure.atoms.forEach(atom => counts.set(atom.element, (counts.get(atom.element) ?? 0) + 1));
@@ -43,6 +62,9 @@ function measurementText(mode: MeasurementMode, atoms: Atom[]): string | undefin
 export class Inspector {
   private active: 'structure' | 'display' | 'selection' = 'structure';
   private structure?: Structure;
+  /** Structure-tab value nodes, for per-frame updates that skip a full rebuild. */
+  private readonly values = new Map<string, HTMLElement>();
+  private heading: HTMLElement | undefined;
   private selection: Atom[] = [];
   private measurement: MeasurementMode = 'none';
   private displayState: DisplayOptions;
@@ -53,7 +75,29 @@ export class Inspector {
     this.displayState = { ...display, hiddenElements: new Set(display.hiddenElements) };
   }
 
-  setStructure(structure: Structure): void { this.structure = structure; this.render(); }
+  setStructure(structure: Structure): void {
+    const previous = this.structure;
+    this.structure = structure;
+    // During playback only the per-frame values change. Rebuilding the whole
+    // inspector on every frame - tabs, element rows and one row per element pair -
+    // was pure churn, so refresh the values in place when the shape is unchanged.
+    if (previous && this.active !== 'structure' && sameShape(previous, structure)) return;
+    if (previous && this.active === 'structure' && sameShape(previous, structure) && this.updateStructureValues()) return;
+    this.render();
+  }
+
+  /** Updates the Structure tab's per-frame values without rebuilding the DOM. */
+  private updateStructureValues(): boolean {
+    const structure = this.structure;
+    if (!structure || !this.values.size) return false;
+    this.values.get('Atoms')!.textContent = String(structure.atoms.length);
+    this.values.get('Bonds')!.textContent = String(structure.bonds.length);
+    const cell = this.values.get('Cell');
+    if (cell) cell.textContent = cellSummary(structure);
+    const heading = this.heading;
+    if (heading) heading.textContent = structure.name.split('/').at(-1) ?? structure.name;
+    return true;
+  }
   setSelection(selection: Atom[], mode: MeasurementMode): void { this.selection = selection; this.measurement = mode; this.active = 'selection'; this.render(); }
 
   reset(display: DisplayOptions): void {
@@ -67,6 +111,8 @@ export class Inspector {
 
   private render(): void {
     clear(this.root);
+    this.values.clear();
+    this.heading = undefined;
     const tabs = element('div', 'inspector-tabs');
     for (const tab of ['structure', 'display', 'selection'] as const) {
       const button = element('button', tab === this.active ? 'tab active' : 'tab', tab[0]!.toUpperCase() + tab.slice(1));
@@ -83,13 +129,16 @@ export class Inspector {
 
   private row(label: string, value: string): HTMLElement {
     const row = element('div', 'property-row');
-    row.append(element('span', 'property-label', label), element('span', 'property-value', value));
+    const node = element('span', 'property-value', value);
+    this.values.set(label, node);
+    row.append(element('span', 'property-label', label), node);
     return row;
   }
 
   private renderStructure(body: HTMLElement): void {
     if (!this.structure) return;
     const heading = element('h2', undefined, this.structure.name.split('/').at(-1) ?? this.structure.name);
+    this.heading = heading;
     body.append(heading, this.row('Formula', formula(this.structure)), this.row('Atoms', String(this.structure.atoms.length)), this.row('Bonds', String(this.structure.bonds.length)), this.row('Cell', cellSummary(this.structure)));
     const spaceGroup = this.structure.metadata?.spaceGroup;
     if (spaceGroup !== undefined) body.append(this.row('Space group', String(spaceGroup)));
@@ -152,10 +201,15 @@ export class Inspector {
       }));
     }
     body.append(element('h3', undefined, 'Bond detection'));
-    body.append(this.slider('Tolerance', this.bondState.tolerance, 0, 1.2, value => {
+    // The value is slack added to the sum of covalent radii, so 0.00 still bonds
+    // atoms at their covalent contact distance. Spell that out: a bare "0.00"
+    // reads as "bonding off".
+    const tolerance = this.slider('Extra bond range', this.bondState.tolerance, 0, 1.2, value => {
       this.bondState.tolerance = value;
       this.actions.bonds(this.bondState);
-    }, 0.05));
+    }, 0.05, ' \u00c5');
+    tolerance.title = 'Atoms bond when they are closer than the sum of their covalent radii plus this value. At 0.00 A only atoms within covalent contact are bonded.';
+    body.append(tolerance);
     const symbols = [...new Set(this.structure.atoms.map(atom => atom.element))].sort();
     const pairs = symbols.flatMap((left, index) => symbols.slice(index).map(right => pairKey(left, right)));
     for (const pair of pairs) body.append(this.bondPairRow(pair));
@@ -189,13 +243,13 @@ export class Inspector {
     return row;
   }
 
-  private slider(labelText: string, value: number, min: number, max: number, change: (value: number) => void, step = 0.05): HTMLLabelElement {
+  private slider(labelText: string, value: number, min: number, max: number, change: (value: number) => void, step = 0.05, unit = ''): HTMLLabelElement {
     const label = element('label', 'slider-row');
     const header = element('span', 'slider-label');
-    const output = element('output', undefined, value.toFixed(2));
+    const output = element('output', undefined, `${value.toFixed(2)}${unit}`);
     header.append(element('span', undefined, labelText), output);
     const input = element('input'); input.type = 'range'; input.min = String(min); input.max = String(max); input.step = String(step); input.value = String(value);
-    input.addEventListener('input', () => { const next = Number(input.value); output.value = next.toFixed(2); change(next); });
+    input.addEventListener('input', () => { const next = Number(input.value); output.value = `${next.toFixed(2)}${unit}`; change(next); });
     label.append(header, input); return label;
   }
 

@@ -2,23 +2,32 @@
 
 Open molecular and crystal structure files directly in a Visual Studio Code editor tab and inspect them in interactive 3D.
 
-Built for local and Remote SSH materials workflows: no Python environment, no external application, no server, and no network access. The extension has **no runtime dependencies** and the whole package is about 35 KB.
+Built for local and Remote SSH materials workflows: no Python environment, no external application, no server, and no network access. The extension installs **no runtime dependencies** - the one bundled third-party component, the GIF encoder, is compiled into the webview script - and the whole package is about 60 KB.
 
 ## Features
 
 - **3D structure view** with ball-and-stick, sticks, and space-filling representations
 - **Crystal support** including unit cells, lattice-axis alignment, and on-the-fly supercell expansion
-- **Trajectories** with play, pause, step, scrub, speed, and loop controls
+- **Trajectories** with play, pause, step, scrub, and loop controls, at 1-50 fps
 - **Measurements** for distance, angle, and dihedral between picked atoms
 - **Inspectors** for composition, lattice details, metadata, element visibility, and bond-detection tolerance
-- **PNG export** of the current view
+- **PNG export** of the current view, and **animated GIF export** of a whole trajectory
 - Perspective and orthographic projection, atom labels, and a light/dark canvas toggle
 
-<img src="docs/demo.png">
+<img src="https://raw.githubusercontent.com/linhlathuy/molaview/main/docs/demo.png" alt="MoLaView viewing a crystal structure in a VS Code editor tab">
 
-## Install in VSCode
+## Install
 
-Clone the repository, build the package, and install it:
+Search for **MoLaView** in the Extensions view (`Ctrl+Shift+X`), or install from the
+command line:
+
+```bash
+code --install-extension ltlinh.molaview
+```
+
+Then open any supported structure file and it renders in the viewer.
+
+### Build from source
 
 ```bash
 git clone https://github.com/linhlathuy/molaview
@@ -26,12 +35,13 @@ cd molaview/
 npm install
 npm run build
 npx @vscode/vsce package
-code --install-extension molaview-1.0.0.vsix
+code --install-extension molaview-1.1.0.vsix
 ```
 
-See [docs/INSTALL.md](docs/INSTALL.md) for the full guide, including Remote SSH notes.
+See [the install guide](https://github.com/linhlathuy/molaview/blob/main/docs/INSTALL.md) for the full walkthrough, including
+Remote SSH notes.
 
-Test the view with structures and trajectories in  ```test_structures```.
+Test the viewer with the structures and trajectories in `test_structures`.
 ## Repository Layout
 
 ```
@@ -39,7 +49,7 @@ src/        extension host code
 webview/    viewer UI and WebGL renderer
 playwright/ end-to-end tests
 config/     esbuild and Playwright configuration
-docs/       install guide, changelog, notices
+docs/       install guide, notices
 ```
 
 Build and test from the project root:
@@ -63,16 +73,24 @@ npm run verify     # all three
 
 Supported files open in the viewer by default. Use **Reopen Editor With... > Text Editor** or **Molecular Viewer: Reopen as Text** to inspect the source.
 
-ASE trajectories expose at most 11 representative structures: the first frame, the nearest frame at each 10% interval, and the last frame. Duplicate indices are removed for short trajectories. The playback label always shows both the sample position and original trajectory frame.
+ASE trajectories expose every frame by default. Frames are read on demand, so a long
+trajectory opens immediately and only the frames you visit are decoded.
+
+Set `molaview.trajectory.maxFrames` to a positive number to cap how many frames are
+loaded; the viewer then spreads that many evenly across the trajectory, always keeping
+the first and last frame. The playback label shows `Frame 250/2500` when every frame is
+loaded, and `Sample 3/11 - Frame 250/2500` when a cap is active. Reopen the file after
+changing the setting.
 
 ## Controls
 
 - Left drag rotates, right drag pans, and the wheel zooms.
-- The top toolbar fits the structure, changes projection, aligns along lattice axes, toggles labels, selects distance/angle/dihedral measurement modes, changes the canvas background, saves a PNG, and resets the viewer.
+- The top toolbar fits the structure, changes projection, aligns along lattice axes, toggles labels, selects distance/angle/dihedral measurement modes, changes the canvas background, saves a PNG, exports an animated GIF, and resets the viewer.
+- **GIF export** walks the whole trajectory at the current camera angle and display settings, using the selected playback speed as the frame delay. Progress is shown while it runs and can be cancelled. Exports are limited to 600 frames; use `molaview.trajectory.maxFrames` to sample a longer run down first.
 - The **Structure** inspector shows composition, lattice details, metadata, and supercell controls.
 - The **Display** inspector changes representation, sizes, visible geometry, element visibility, and inferred-bond tolerance.
 - The **Selection** inspector shows picked atoms and completed measurements.
-- Multi-frame files display play, pause, step, scrub, speed, frame, and loop controls.
+- Multi-frame files display play, pause, step, scrub, speed, frame, and loop controls. Playback runs at 1, 2, 5, 10, 20, 30, or 50 fps.
 
 ## Offline and Remote Use
 
@@ -80,7 +98,7 @@ All parsers, WebGL rendering code, styles, and icons are bundled in the VSIX. Th
 
 ## Current Scope
 
-The first release is a read-only atomic-structure viewer. It does not display volumetric density, edit atoms, export modified structure files, parse V3000 MOL records, or read obsolete pickle-based ASE trajectories. CIF support targets the common structural subset and reports unsupported or malformed variants instead of guessing coordinates.
+MoLaView is a read-only atomic-structure viewer. It does not display volumetric density, edit atoms, export modified structure files, parse V3000 MOL records, or read obsolete pickle-based ASE trajectories. CIF support targets the common structural subset and reports unsupported or malformed variants instead of guessing coordinates.
 
 ## VESTA Reference Boundary
 

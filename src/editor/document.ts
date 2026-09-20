@@ -28,17 +28,23 @@ class ParsedFrameSource implements FrameSource {
   }
 }
 
+function maxTrajectoryFrames(uri: vscode.Uri): number {
+  const value = vscode.workspace.getConfiguration('molaview', uri).get<number>('trajectory.maxFrames', 0);
+  return Number.isInteger(value) && value > 0 ? value : 0;
+}
+
 async function sourceFromUri(uri: vscode.Uri): Promise<FrameSource> {
   const name = uri.path.split('/').at(-1) ?? uri.path;
+  const maxFrames = maxTrajectoryFrames(uri);
   let pathFormat: StructureFormat | undefined;
   try { pathFormat = detectFormat(uri.path, ''); } catch { /* Fall back to content probing. */ }
   if (pathFormat === 'ase-traj' && (uri.scheme === 'file' || uri.scheme === 'vscode-remote')) {
-    return AseTrajectorySource.openFile(uri.fsPath, name);
+    return AseTrajectorySource.openFile(uri.fsPath, name, maxFrames);
   }
   const bytes = await vscode.workspace.fs.readFile(uri);
   const preview = new TextDecoder().decode(bytes.subarray(0, Math.min(bytes.length, 8192)));
   const format = pathFormat ?? detectFormat(uri.path, preview);
-  if (format === 'ase-traj') return AseTrajectorySource.open(bytes, name);
+  if (format === 'ase-traj') return AseTrajectorySource.open(bytes, name, maxFrames);
   return new ParsedFrameSource(parseTextDocument(new TextDecoder().decode(bytes), name, format));
 }
 
@@ -102,7 +108,15 @@ export class StructureDocument implements vscode.CustomDocument {
     const originalFrameIndex = source.sampledIndices[sampleIndex]!;
     return {
       structure,
-      ...(source.frameCount > 1 ? { trajectory: { frameCount: source.frameCount, sampledIndices: source.sampledIndices } } : {}),
+      ...(source.frameCount > 1
+        ? {
+            trajectory: {
+              frameCount: source.frameCount,
+              sampleCount: source.sampledIndices.length,
+              sampled: source.sampledIndices.length !== source.frameCount
+            }
+          }
+        : {}),
       sampleIndex,
       originalFrameIndex
     };

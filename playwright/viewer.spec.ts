@@ -20,7 +20,7 @@ const state = {
     cell: { vectors: [[5, 0, 0], [0, 5, 0], [0, 0, 5]], periodic: [true, true, true] },
     metadata: { spaceGroup: 'P6/mmm' }
   },
-  trajectory: { frameCount: 21, sampledIndices: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20] },
+  trajectory: { frameCount: 21, sampleCount: 11, sampled: true },
   sampleIndex: 0,
   originalFrameIndex: 0
 };
@@ -36,7 +36,8 @@ async function openViewer(page: Page): Promise<void> {
         sent.push(message);
         if (message.type === 'ready') queueMicrotask(() => window.postMessage({ type: 'load', state: initialState }, '*'));
         if (message.type === 'requestFrame' && message.sampleIndex !== undefined) {
-          const originalFrameIndex = initialState.trajectory.sampledIndices[message.sampleIndex]!;
+          const last = initialState.trajectory.frameCount - 1;
+          const originalFrameIndex = Math.round(last * message.sampleIndex / (initialState.trajectory.sampleCount - 1));
           const structure = structuredClone(initialState.structure);
           const atom = structure.atoms[4]!;
           atom.position = [atom.position[0]!, atom.position[1]!, atom.position[2]! + message.sampleIndex * 0.05];
@@ -95,7 +96,22 @@ test('renders and rotates a structure on desktop', async ({ page }) => {
   })).toEqual([]);
 
   await page.locator('.trajectory-scrubber').fill('10');
-  await expect(page.locator('.frame-label')).toContainText('Frame 21/21');
+  await expect(page.locator('.frame-label')).toHaveText('Sample 11/11 - Frame 21/21');
+  await expect(page.locator('.speed-select option')).toHaveText(['1 fps', '2 fps', '5 fps', '10 fps', '20 fps', '30 fps', '50 fps']);
+  // The controls persist across frame updates instead of being rebuilt, so the
+  // scrubber the test grabbed above must still be the live element.
+  await page.locator('.speed-select').selectOption('50');
+  await expect(page.locator('.trajectory-scrubber')).toHaveValue('10');
+  // GIF export walks every sample and posts one saveGif message with the encoded
+  // bytes. Verify it reaches the host and starts with the GIF89a signature.
+  await page.getByTitle('Save animated GIF of the trajectory').click();
+  await expect.poll(() => page.evaluate(() => {
+    const messages = (window as unknown as { __viewerMessages: Array<{ type?: string; bytes?: number[]; suggestedName?: string }> }).__viewerMessages;
+    const gif = messages.filter(message => message.type === 'saveGif').at(-1);
+    return gif ? { head: gif.bytes?.slice(0, 6), name: gif.suggestedName } : undefined;
+  }), { timeout: 30000 }).toEqual({ head: [71, 73, 70, 56, 57, 97], name: 'Mo2N3_preview.gif' });
+  await expect(page.locator('.export-progress')).toHaveCount(0);
+
   await page.getByTitle('Save PNG screenshot').click();
   await expect.poll(() => page.evaluate(() => {
     const messages = (window as unknown as { __viewerMessages: Array<{ type?: string; bytes?: number[] }> }).__viewerMessages;

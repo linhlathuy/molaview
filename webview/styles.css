@@ -374,3 +374,22 @@ select {
   .frame-label { grid-column: 1 / -1; grid-row: 2; padding: 2px 4px; }
   .speed-select, .loop-toggle { display: none; }
 }
+
+.export-progress {
+  position: absolute;
+  right: 10px;
+  bottom: 56px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid var(--vscode-widget-border, #454545);
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background, #252526);
+  box-shadow: 0 2px 8px #0006;
+}
+
+.export-progress-label { white-space: nowrap; font-variant-numeric: tabular-nums; }

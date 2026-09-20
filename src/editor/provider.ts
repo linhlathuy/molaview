@@ -48,6 +48,7 @@ export class StructureEditorProvider implements vscode.CustomReadonlyEditorProvi
         case 'requestFrame': await showState(message.sampleIndex); break;
         case 'reopenAsText': await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default'); break;
         case 'saveScreenshot': await this.saveScreenshot(document.uri, message.bytes, message.suggestedName); break;
+        case 'saveGif': await this.saveBinary(document.uri, message.bytes, message.suggestedName, 'GIF image', 'gif'); break;
         case 'setBondOverrides': {
           const cutoffs = Object.fromEntries(Object.entries(message.cutoffs).map(([key, value]) => {
             const elements = key.split('-');
@@ -78,12 +79,16 @@ export class StructureEditorProvider implements vscode.CustomReadonlyEditorProvi
   }
 
   private async saveScreenshot(source: vscode.Uri, values: number[], suggestedName: string): Promise<void> {
+    await this.saveBinary(source, values, suggestedName, 'PNG image', 'png');
+  }
+
+  private async saveBinary(source: vscode.Uri, values: number[], suggestedName: string, label: string, extension: string): Promise<void> {
     if (values.length > 100_000_000 || values.some(value => !Number.isInteger(value) || value < 0 || value > 255)) {
-      throw new Error('Invalid screenshot data');
+      throw new Error(`Invalid ${label} data`);
     }
     const target = await vscode.window.showSaveDialog({
       defaultUri: vscode.Uri.joinPath(source, '..', suggestedName),
-      filters: { 'PNG image': ['png'] }
+      filters: { [label]: [extension] }
     });
     if (target) await vscode.workspace.fs.writeFile(target, Uint8Array.from(values));
   }

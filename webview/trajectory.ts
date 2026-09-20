@@ -24,10 +24,13 @@ export class PlaybackController {
   }
 
   delay(): number {
-    return 1000 / Math.max(0.25, Math.min(30, this.options.fps));
+    return 1000 / Math.max(0.25, Math.min(60, this.options.fps));
   }
 }
 
 export function formatFrameLabel(sampleIndex: number, sampleCount: number, originalIndex: number, frameCount: number): string {
+  // With every frame loaded the sample position and the trajectory frame are the
+  // same number, so the two-part label only adds noise.
+  if (sampleCount === frameCount) return `Frame ${originalIndex + 1}/${frameCount}`;
   return `Sample ${sampleIndex + 1}/${sampleCount} - Frame ${originalIndex + 1}/${frameCount}`;
 }

@@ -49,7 +49,10 @@ export interface ParsedDocument {
 
 export interface TrajectorySummary {
   frameCount: number;
-  sampledIndices?: number[];
+  /** Number of frames the viewer can step through. Equals frameCount unless sampling is active. */
+  sampleCount: number;
+  /** True when maxFrames forced an even subset instead of every frame. */
+  sampled: boolean;
 }
 
 function assertVec3(value: Vec3, description: string): void {
